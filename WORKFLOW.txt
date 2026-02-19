@@ -1,0 +1,31 @@
+# Blender + Unity Workflow (Human Guide)
+
+This repository follows the same `_agent` + `_docs` workflow style as your mods, tailored for animation content production.
+
+1. **Bootstrap Context**
+   - Script: `_agent/bootstrap-context.ps1`
+   - Ensures `SCRATCHPAD.md`, `_visions/`, `_quirks/`, `_resources/` exist.
+
+2. **Environment + Pipeline Smoke Test**
+   - Script: `_agent/test.ps1 -Strict`
+   - Verifies Blender, Unity, BasSDK builder, and CDAM mod paths.
+
+3. **Publish Content (Blender -> Unity -> Mod Package)**
+   - Script: `_agent/publish.ps1 -Force`
+   - Runs Blender export/validation, Unity addressables build, then mod publish packaging.
+
+4. **Deploy to Quest (Optional)**
+   - Script: `_agent/deploy-quest.ps1`
+   - Pushes Nomad mod folder to Quest mod path via `adb`.
+
+5. **Git Snapshot**
+   - Script: `_agent/snapshot.ps1 -Message "snapshot: <topic>"`
+   - Creates snapshot commit + timestamp tag.
+
+6. **Remote Git Setup**
+   - Script: `_agent/configure-remote.ps1`
+   - Initializes git (if needed), creates/attaches GitHub remote, pushes branch.
+
+7. **Policy Source**
+   - `_docs/GIT_WORKFLOW.md` is the source of truth for commit/push/tag behavior.
+

@@ -1,0 +1,21 @@
+# OS/editor
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+
+# Blender backup/autosave
+*.blend1
+*.blend2
+*.blend@
+Untitled.blend
+
+# Python cache
+__pycache__/
+tools/__pycache__/
+
+# Generated outputs
+exports/
+renders/
+builds/
+
