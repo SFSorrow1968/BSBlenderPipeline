@@ -33,8 +33,13 @@ if ($remoteUrl) {
 $fullRepo = "$Owner/$RepoName"
 $sshUrl = "git@github.com:$fullRepo.git"
 
-gh repo view $fullRepo --json name,url 1>$null 2>$null
+$repoExists = $false
+cmd /c "gh repo view $fullRepo --json name,url >nul 2>nul"
 if ($LASTEXITCODE -eq 0) {
+    $repoExists = $true
+}
+
+if ($repoExists) {
     git remote add origin $sshUrl
     Write-Host "Attached existing remote: $sshUrl"
 }
@@ -52,4 +57,3 @@ if (-not $branch) {
 
 git push -u origin $branch | Out-Host
 Write-Host "Remote configuration complete."
-
