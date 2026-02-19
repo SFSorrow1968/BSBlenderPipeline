@@ -28,8 +28,8 @@ function Resolve-UnityExe {
     if ($Provided -and (Test-Path $Provided)) { $candidates += $Provided }
     if ($env:UNITY_EXE -and (Test-Path $env:UNITY_EXE)) { $candidates += $env:UNITY_EXE }
     $candidates += @(
-        "D:\UnityHubEditors\2021.3.38f1\Editor\Unity.exe",
-        "C:\Program Files\Unity 2021.3.38f1\Editor\Unity.exe"
+        "C:\Program Files\Unity 2021.3.38f1\Editor\Unity.exe",
+        "D:\UnityHubEditors\2021.3.38f1\Editor\Unity.exe"
     )
     $cmd = Get-Command Unity.exe -ErrorAction SilentlyContinue
     if ($cmd -and $cmd.Source -and (Test-Path $cmd.Source)) {
@@ -104,8 +104,23 @@ $modRoot = Join-Path $bsRoot "Mods\CustomDeathAnimationMod\bin"
 $pcvrFolder = Join-Path $modRoot "PCVR\CustomDeathAnimationMod"
 $nomadFolder = Join-Path $modRoot "Nomad\CustomDeathAnimationMod"
 
-Assert-RequiredFiles -FolderPath $pcvrFolder
-Assert-RequiredFiles -FolderPath $nomadFolder
+$mode = "all"
+if ($ExecuteMethod -match "BuildAndExportNomad") {
+    $mode = "nomad"
+}
+elseif ($ExecuteMethod -match "BuildAndExportPcvr") {
+    $mode = "pcvr"
+}
 
-Write-Host "[unity] Content build complete. Artifacts verified for PCVR + Nomad."
+if ($mode -eq "all" -or $mode -eq "pcvr") {
+    Assert-RequiredFiles -FolderPath $pcvrFolder
+}
+if ($mode -eq "all" -or $mode -eq "nomad") {
+    Assert-RequiredFiles -FolderPath $nomadFolder
+}
 
+switch ($mode) {
+    "pcvr"  { Write-Host "[unity] Content build complete. Artifacts verified for PCVR." }
+    "nomad" { Write-Host "[unity] Content build complete. Artifacts verified for Nomad." }
+    default { Write-Host "[unity] Content build complete. Artifacts verified for PCVR + Nomad." }
+}

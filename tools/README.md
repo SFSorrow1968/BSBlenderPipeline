@@ -36,11 +36,15 @@ powershell -ExecutionPolicy Bypass -File .\tools\bs_death_pipeline.ps1 `
   -ClipName Death_Male_A `
   -RootBone Hips `
   -Fps 60 `
-  -DurationSec 0.8 `
+  -DurationSec 3.0 `
+  -MinDurationSec 0.5 `
+  -MaxDurationSec 4.0 `
   -StartFrame 1 `
   -DriftThreshold 0.03 `
   -AutoBlock
 ```
+
+When `-UseCurrentScene` is used and the action already has keys, the pipeline now preserves the existing action instead of recreating it.
 
 ### Important flags
 
@@ -52,7 +56,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\bs_death_pipeline.ps1 `
 
 ### Validation criteria enforced
 
-- Clip duration in recommended range `0.5s` to `1.0s`.
+- Clip duration inside configured recommendation range (default `0.5s` to `1.0s`, override via `-MinDurationSec`/`-MaxDurationSec`).
 - Timeline markers exist: `impact`, `collapse`, `limp`.
 - Root XY drift stays below threshold (default `0.03`).
 

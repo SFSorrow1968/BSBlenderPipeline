@@ -19,6 +19,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fps", type=int, default=60)
     parser.add_argument("--start-frame", type=int, default=1)
     parser.add_argument("--end-frame", type=int, default=49)
+    parser.add_argument("--min-duration-sec", type=float, default=0.5)
+    parser.add_argument("--max-duration-sec", type=float, default=1.0)
     parser.add_argument("--drift-threshold", type=float, default=0.03)
     parser.add_argument("--root-bone", default="", help="Root/pelvis bone.")
     return parser.parse_args(argv)
@@ -93,8 +95,11 @@ def main() -> int:
 
     issues: List[str] = []
     duration = (args.end_frame - args.start_frame) / float(args.fps)
-    if duration < 0.5 or duration > 1.0:
-        issues.append(f"Duration {duration:.3f}s outside recommended [0.5, 1.0].")
+    if duration < args.min_duration_sec or duration > args.max_duration_sec:
+        issues.append(
+            f"Duration {duration:.3f}s outside recommended "
+            f"[{args.min_duration_sec:.3f}, {args.max_duration_sec:.3f}]."
+        )
 
     if action is None:
         issues.append("No active action found.")

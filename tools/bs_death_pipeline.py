@@ -36,6 +36,18 @@ def parse_args() -> argparse.Namespace:
         default=0.8,
         help="Clip duration in seconds (recommended 0.5-1.0).",
     )
+    parser.add_argument(
+        "--min-duration-sec",
+        type=float,
+        default=0.5,
+        help="Minimum recommended duration in seconds used by validation.",
+    )
+    parser.add_argument(
+        "--max-duration-sec",
+        type=float,
+        default=1.0,
+        help="Maximum recommended duration in seconds used by validation.",
+    )
     parser.add_argument("--start-frame", type=int, default=1, help="Clip start frame.")
     parser.add_argument(
         "--root-bone",
@@ -123,14 +135,17 @@ def set_active_object(obj: bpy.types.Object) -> None:
     bpy.context.view_layer.objects.active = obj
 
 
-def ensure_action(armature_obj: bpy.types.Object, clip_name: str) -> bpy.types.Action:
+def ensure_action(armature_obj: bpy.types.Object, clip_name: str, reset_existing: bool = True) -> bpy.types.Action:
     if armature_obj.animation_data is None:
         armature_obj.animation_data_create()
 
     action = bpy.data.actions.get(clip_name)
-    if action is not None:
+    if action is not None and reset_existing:
         bpy.data.actions.remove(action)
-    action = bpy.data.actions.new(name=clip_name)
+        action = None
+
+    if action is None:
+        action = bpy.data.actions.new(name=clip_name)
 
     armature_obj.animation_data.action = action
     return action
@@ -456,12 +471,15 @@ def validate_clip(
     frame_end: int,
     fps: int,
     drift_threshold: float,
+    min_duration_sec: float,
+    max_duration_sec: float,
 ) -> List[str]:
     issues: List[str] = []
     duration = (frame_end - frame_start) / float(fps)
-    if duration < 0.5 or duration > 1.0:
+    if duration < min_duration_sec or duration > max_duration_sec:
         issues.append(
-            f"Duration {duration:.3f}s is outside recommended range [0.5, 1.0]."
+            f"Duration {duration:.3f}s is outside recommended range "
+            f"[{min_duration_sec:.3f}, {max_duration_sec:.3f}]."
         )
 
     curve_count = sum(1 for _ in iter_action_fcurves(action)) if action else 0
@@ -547,7 +565,13 @@ def main() -> int:
     log(f"Using armature: {armature_obj.name}")
 
     set_active_object(armature_obj)
-    action = ensure_action(armature_obj, args.clip_name)
+    existing_curve_count = 0
+    if args.use_current_scene:
+        existing_action = bpy.data.actions.get(args.clip_name)
+        if existing_action is not None:
+            existing_curve_count = sum(1 for _ in iter_action_fcurves(existing_action))
+
+    action = ensure_action(armature_obj, args.clip_name, reset_existing=not args.use_current_scene)
 
     frame_start = args.start_frame
     frame_end = int(round(args.start_frame + args.duration_sec * args.fps))
@@ -568,12 +592,15 @@ def main() -> int:
     if args.auto_block:
         apply_auto_block(armature_obj, root_bone, frame_start, f_impact, f_collapse, f_limp)
     else:
-        # Authoring baseline: provide guaranteed start/end keys without moving root translation.
-        bpy.context.scene.frame_set(frame_start)
-        key_pose(armature_obj, frame_start, root_bone, lock_root_location=True)
-        bpy.context.scene.frame_set(frame_end)
-        key_pose(armature_obj, frame_end, root_bone, lock_root_location=True)
-        log("Inserted baseline start/end keys. Refine poses manually in Blender before final export.")
+        if args.use_current_scene and existing_curve_count > 0:
+            log("Keeping existing keyed action in current scene.")
+        else:
+            # Authoring baseline: provide guaranteed start/end keys without moving root translation.
+            bpy.context.scene.frame_set(frame_start)
+            key_pose(armature_obj, frame_start, root_bone, lock_root_location=True)
+            bpy.context.scene.frame_set(frame_end)
+            key_pose(armature_obj, frame_end, root_bone, lock_root_location=True)
+            log("Inserted baseline start/end keys. Refine poses manually in Blender before final export.")
 
     set_action_curve_defaults(action)
 
@@ -587,6 +614,8 @@ def main() -> int:
         frame_end=frame_end,
         fps=args.fps,
         drift_threshold=args.drift_threshold,
+        min_duration_sec=args.min_duration_sec,
+        max_duration_sec=args.max_duration_sec,
     )
 
     if issues:

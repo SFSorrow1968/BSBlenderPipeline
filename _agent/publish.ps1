@@ -1,17 +1,20 @@
 param(
     [switch]$Force,
+    [switch]$IncludePcvr,
     [switch]$SkipBlender,
     [switch]$SkipUnity,
     [switch]$SkipModPublish,
     [string]$BlendPath = "work/Death_Male_A_3s.blend",
     [string]$OutputFbx = "exports/Death_Male_A_3s.fbx",
-    [string]$OutputBlend = "work/Death_Male_A_3s.blend",
+    [string]$OutputBlend = "",
     [string]$ClipName = "Death_Male_A_3s",
     [string]$RootBone = "Hips",
     [int]$Fps = 60,
     [double]$DurationSec = 3.0,
     [int]$StartFrame = 1,
-    [double]$DriftThreshold = 0.03
+    [double]$DriftThreshold = 0.03,
+    [double]$MinDurationSec = 0.5,
+    [double]$MaxDurationSec = 4.0
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,17 +25,6 @@ $modRoot = Join-Path $bsRoot "Mods\CustomDeathAnimationMod"
 $modPublishScript = Join-Path $modRoot "_agent\publish.ps1"
 
 Set-Location $repoRoot
-
-function Invoke-ScriptOrThrow {
-    param(
-        [string]$ScriptPath,
-        [string[]]$Arguments = @()
-    )
-    & $ScriptPath @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "Script failed: $ScriptPath (exit code $LASTEXITCODE)"
-    }
-}
 
 function Resolve-RepoPath {
     param([string]$RelativePath)
@@ -92,12 +84,14 @@ if (-not $Force) {
 
 $resolvedBlend = Resolve-RepoPath -RelativePath $BlendPath
 $resolvedOutputFbx = Resolve-RepoPath -RelativePath $OutputFbx
-$resolvedOutputBlend = Resolve-RepoPath -RelativePath $OutputBlend
+$resolvedOutputBlend = if ($OutputBlend) { Resolve-RepoPath -RelativePath $OutputBlend } else { $resolvedBlend }
 
-$blendDir = Split-Path -Parent $resolvedOutputBlend
 $fbxDir = Split-Path -Parent $resolvedOutputFbx
-if (-not (Test-Path $blendDir)) { New-Item -ItemType Directory -Path $blendDir -Force | Out-Null }
 if (-not (Test-Path $fbxDir)) { New-Item -ItemType Directory -Path $fbxDir -Force | Out-Null }
+if ($OutputBlend) {
+    $blendDir = Split-Path -Parent $resolvedOutputBlend
+    if (-not (Test-Path $blendDir)) { New-Item -ItemType Directory -Path $blendDir -Force | Out-Null }
+}
 
 $frameCount = [Math]::Ceiling($DurationSec * $Fps)
 $endFrame = $StartFrame + [int]$frameCount - 1
@@ -108,28 +102,41 @@ if (-not $SkipBlender) {
     $pipelineScript = Join-Path $repoRoot "tools\bs_death_pipeline.ps1"
     $validateScript = Join-Path $repoRoot "tools\bs_death_validate.ps1"
 
-    Invoke-ScriptOrThrow -ScriptPath $pipelineScript -Arguments @(
-        "-BlendPath", $resolvedBlend,
-        "-UseCurrentScene",
-        "-OutputFbx", $resolvedOutputFbx,
-        "-OutputBlend", $resolvedOutputBlend,
-        "-ClipName", $ClipName,
-        "-RootBone", $RootBone,
-        "-Fps", "$Fps",
-        "-DurationSec", "$DurationSec",
-        "-StartFrame", "$StartFrame",
-        "-DriftThreshold", "$DriftThreshold"
-    )
+    $pipelineArgs = @{
+        BlendPath = $resolvedBlend
+        UseCurrentScene = $true
+        OutputFbx = $OutputFbx
+        ClipName = $ClipName
+        RootBone = $RootBone
+        Fps = $Fps
+        DurationSec = $DurationSec
+        MinDurationSec = $MinDurationSec
+        MaxDurationSec = $MaxDurationSec
+        StartFrame = $StartFrame
+        DriftThreshold = $DriftThreshold
+    }
+    if ($OutputBlend) {
+        $pipelineArgs.OutputBlend = $OutputBlend
+    }
 
-    Invoke-ScriptOrThrow -ScriptPath $validateScript -Arguments @(
-        "-BlendPath", $resolvedOutputBlend,
-        "-Action", $ClipName,
-        "-RootBone", $RootBone,
-        "-Fps", "$Fps",
-        "-StartFrame", "$StartFrame",
-        "-EndFrame", "$endFrame",
-        "-DriftThreshold", "$DriftThreshold"
-    )
+    & $pipelineScript @pipelineArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Blender pipeline failed (exit code $LASTEXITCODE)."
+    }
+
+    & $validateScript `
+        -BlendPath $resolvedOutputBlend `
+        -Action $ClipName `
+        -RootBone $RootBone `
+        -Fps $Fps `
+        -StartFrame $StartFrame `
+        -EndFrame $endFrame `
+        -MinDurationSec $MinDurationSec `
+        -MaxDurationSec $MaxDurationSec `
+        -DriftThreshold $DriftThreshold
+    if ($LASTEXITCODE -ne 0) {
+        throw "Blender validation failed (exit code $LASTEXITCODE)."
+    }
 }
 else {
     Write-Host "2. Blender stage skipped." -ForegroundColor DarkYellow
@@ -138,7 +145,45 @@ else {
 if (-not $SkipUnity) {
     Write-Host "3. Unity content build..." -ForegroundColor Cyan
     $unityBuildScript = Join-Path $PSScriptRoot "build-unity-content.ps1"
-    Invoke-ScriptOrThrow -ScriptPath $unityBuildScript
+    $pcvrUnity = "C:\Program Files\Unity 2021.3.38f1\Editor\Unity.exe"
+    $nomadUnity = "D:\UnityHubEditors\2021.3.38f1\Editor\Unity.exe"
+
+    if ($IncludePcvr) {
+        $pcvrLog = Join-Path $repoRoot "builds\logs\unity-content-build-pcvr.log"
+        if (Test-Path $pcvrUnity) {
+            & $unityBuildScript `
+                -UnityExe $pcvrUnity `
+                -ExecuteMethod "CustomDeathAnimationMod.EditorTools.CustomDeathAnimationContentBuilder.BuildAndExportPcvr" `
+                -LogPath $pcvrLog
+        }
+        else {
+            & $unityBuildScript `
+                -ExecuteMethod "CustomDeathAnimationMod.EditorTools.CustomDeathAnimationContentBuilder.BuildAndExportPcvr" `
+                -LogPath $pcvrLog
+        }
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unity PCVR content stage failed (exit code $LASTEXITCODE)."
+        }
+    }
+    else {
+        Write-Host "3a. PCVR content build skipped (pass -IncludePcvr to enable)." -ForegroundColor DarkYellow
+    }
+
+    $nomadLog = Join-Path $repoRoot "builds\logs\unity-content-build-nomad.log"
+    if (Test-Path $nomadUnity) {
+        & $unityBuildScript `
+            -UnityExe $nomadUnity `
+            -ExecuteMethod "CustomDeathAnimationMod.EditorTools.CustomDeathAnimationContentBuilder.BuildAndExportNomad" `
+            -LogPath $nomadLog
+    }
+    else {
+        & $unityBuildScript `
+            -ExecuteMethod "CustomDeathAnimationMod.EditorTools.CustomDeathAnimationContentBuilder.BuildAndExportNomad" `
+            -LogPath $nomadLog
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unity Nomad content stage failed (exit code $LASTEXITCODE)."
+    }
 }
 else {
     Write-Host "3. Unity stage skipped." -ForegroundColor DarkYellow

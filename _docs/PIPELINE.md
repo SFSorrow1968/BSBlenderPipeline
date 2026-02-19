@@ -16,6 +16,9 @@ This repository orchestrates a three-stage content workflow.
   - `Assets/Personal/Editor/CustomDeathAnimationContentBuilder.cs`
 - Execute method:
   - `CustomDeathAnimationMod.EditorTools.CustomDeathAnimationContentBuilder.BuildAndExportAll`
+- Workflow default editor split:
+  - PCVR: `C:\Program Files\Unity 2021.3.38f1\Editor\Unity.exe`
+  - Nomad: `D:\UnityHubEditors\2021.3.38f1\Editor\Unity.exe`
 - Expected outputs:
   - `../Mods/CustomDeathAnimationMod/bin/PCVR/CustomDeathAnimationMod/*`
   - `../Mods/CustomDeathAnimationMod/bin/Nomad/CustomDeathAnimationMod/*`
@@ -36,4 +39,3 @@ This repository orchestrates a three-stage content workflow.
 - `catalog_CustomDeathAnimationMod.json`
 - `catalog_CustomDeathAnimationMod.hash`
 - `cdam_deathanimations_assets_all.bundle`
-

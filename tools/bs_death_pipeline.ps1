@@ -9,6 +9,8 @@ param(
     [string]$ArmatureName = "",
     [int]$Fps = 60,
     [double]$DurationSec = 0.8,
+    [double]$MinDurationSec = 0.5,
+    [double]$MaxDurationSec = 1.0,
     [int]$StartFrame = 1,
     [string]$RootBone = "",
     [double]$DriftThreshold = 0.03,
@@ -42,6 +44,8 @@ $args += @(
     "--clip-name", $ClipName,
     "--fps", "$Fps",
     "--duration-sec", "$DurationSec",
+    "--min-duration-sec", "$MinDurationSec",
+    "--max-duration-sec", "$MaxDurationSec",
     "--start-frame", "$StartFrame",
     "--drift-threshold", "$DriftThreshold"
 )

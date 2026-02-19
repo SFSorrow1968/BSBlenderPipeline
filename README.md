@@ -15,6 +15,8 @@ powershell -ExecutionPolicy Bypass -File .\_agent\test.ps1 -Strict
 powershell -ExecutionPolicy Bypass -File .\_agent\publish.ps1 -Force
 ```
 
+`publish` builds Nomad content by default. Add `-IncludePcvr` to also rebuild PCVR content.
+
 Optional Quest deployment:
 
 ```powershell
@@ -35,4 +37,3 @@ powershell -ExecutionPolicy Bypass -File .\_agent\deploy-quest.ps1
 - Publish flow: `_docs/PUBLISH.md`
 - Tooling: `_docs/TOOLS.md`
 - Pipeline map: `_docs/PIPELINE.md`
-

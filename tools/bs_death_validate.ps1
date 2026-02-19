@@ -5,6 +5,8 @@ param(
     [int]$Fps = 60,
     [int]$StartFrame = 1,
     [int]$EndFrame = 49,
+    [double]$MinDurationSec = 0.5,
+    [double]$MaxDurationSec = 1.0,
     [double]$DriftThreshold = 0.03,
     [string]$RootBone = ""
 )
@@ -24,6 +26,8 @@ $args = @(
     "--fps", "$Fps",
     "--start-frame", "$StartFrame",
     "--end-frame", "$EndFrame",
+    "--min-duration-sec", "$MinDurationSec",
+    "--max-duration-sec", "$MaxDurationSec",
     "--drift-threshold", "$DriftThreshold"
 )
 

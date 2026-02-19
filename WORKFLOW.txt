@@ -12,7 +12,8 @@ This repository follows the same `_agent` + `_docs` workflow style as your mods,
 
 3. **Publish Content (Blender -> Unity -> Mod Package)**
    - Script: `_agent/publish.ps1 -Force`
-   - Runs Blender export/validation, Unity addressables build, then mod publish packaging.
+   - Runs Blender export/validation, Nomad Unity addressables build, then mod publish packaging.
+   - Use `-IncludePcvr` to also rebuild PCVR content.
 
 4. **Deploy to Quest (Optional)**
    - Script: `_agent/deploy-quest.ps1`
@@ -28,4 +29,3 @@ This repository follows the same `_agent` + `_docs` workflow style as your mods,
 
 7. **Policy Source**
    - `_docs/GIT_WORKFLOW.md` is the source of truth for commit/push/tag behavior.
-
